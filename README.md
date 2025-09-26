@@ -24,8 +24,8 @@ This project monitors new Solana token pairs and sends alerts to **Slack** and *
 
 ### 1. Clone repo
 ```bash
-git clone https://github.com/yourname/token-alerts.git
-cd token-alerts
+git clone https://github.com/dexscanner/DexScanner.git
+cd DexScanner
 ```
 
 ### 2. Install dependencies (optional local run)
