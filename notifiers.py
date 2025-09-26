@@ -21,7 +21,7 @@ def send_to_slack(
     age_minutes=None,
     age_seconds=None,
 ):
-    # Slack notifications disabled
+    # Slack integration is disabled.
     return
 
     # --- old Slack code kept for reference ---
