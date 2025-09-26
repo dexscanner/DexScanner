@@ -23,22 +23,17 @@ def _now_ts() -> int:
 def make_seen_key(chainId: str, tokenAddress: str | None = None, dexId: str | None = None, pairAddress: str | None = None):
     """
     Build a stable key:
-      - Prefer pairAddress if provided (most stable across renames etc.)
-      - Else fall back to (chainId, CA, dexId).
-    NOTE: We intentionally DO NOT include tokenName in the key to avoid dupes when names change.
+      - Prefer pairAddress if provided (most unique/stable)
+      - Else fall back to (chainId, CA) only (ignore dexId to prevent duplicates).
     """
     if pairAddress:
         return (chainId, "PAIR", pairAddress)
-    return (chainId, "CA", tokenAddress, dexId)
+    return (chainId, "CA", tokenAddress)
 
 
 def load_seen_tokens():
     """
     Load seen tokens from file and prune anything older than MAX_AGE_SECONDS.
-
-    Returns:
-      - seen_set: set of keys for fast duplicate checks
-      - seen_dict: nested dict { chainId: [ entry, ... ] } suitable for saving
     """
     seen_set = set()
     seen_dict = {}
@@ -55,7 +50,6 @@ def load_seen_tokens():
 
     now = _now_ts()
 
-    # Expecting structure: { "solana": [ { ... }, ... ] }
     for chainId, entries in (data or {}).items():
         kept = []
         if not isinstance(entries, list):
@@ -64,29 +58,27 @@ def load_seen_tokens():
         for entry in entries:
             ca = entry.get("CA")
             dexId = entry.get("dexId")
-            tokenName = entry.get("tokenName")  # for display only
+            tokenName = entry.get("tokenName")
             pairAddress = entry.get("pairAddress")
-            firstSeenTs = entry.get("firstSeenTs")  # epoch seconds
+            firstSeenTs = entry.get("firstSeenTs")
 
-            # Require timestamp; if absent, drop it (legacy or corrupt)
             if not isinstance(firstSeenTs, int):
                 continue
 
-            # Prune > 8h old
+            # Prune old
             if now - firstSeenTs > MAX_AGE_SECONDS:
                 continue
 
-            # Rebuild stable key
-            key = make_seen_key(chainId, tokenAddress=ca, dexId=dexId, pairAddress=pairAddress)
+            key = make_seen_key(chainId, tokenAddress=ca, pairAddress=pairAddress)
             seen_set.add(key)
 
             kept.append({
                 "CA": ca,
                 "dexId": dexId,
                 "tokenName": tokenName,
-                "pairAddress": ca,
+                "pairAddress": pairAddress,   # ✅ fixed (no longer overwrites with CA)
                 "firstSeenTs": firstSeenTs,
-                "ageAtFirstSeen": entry.get("ageAtFirstSeen"),  # human-readable snapshot when added
+                "ageAtFirstSeen": entry.get("ageAtFirstSeen"),
             })
 
         if kept:
@@ -100,6 +92,7 @@ def save_seen_tokens(seen_dict: dict):
         try:
             with open(SEEN_FILE, "w") as f:
                 json.dump(seen_dict, f, indent=2)
+            logging.info(f"Saved {len(seen_dict)} chains into {SEEN_FILE}")
         except Exception as e:
             logging.error(f"Could not save seen tokens: {e}")
 
@@ -118,8 +111,9 @@ def add_seen_token(
     """
     Add a new token entry (under its chainId) and prune >8h entries.
     """
-    key = make_seen_key(chainId, tokenAddress=tokenAddress, dexId=dexId, pairAddress=pairAddress)
+    key = make_seen_key(chainId, tokenAddress=tokenAddress, pairAddress=pairAddress)
     if key in seen_set:
+        logging.debug(f"Skipping duplicate token {tokenAddress} on {chainId}")
         return  # already seen
 
     seen_set.add(key)
@@ -137,13 +131,11 @@ def add_seen_token(
         "ageAtFirstSeen": f"{age_minutes} min ({age_seconds} sec)",
     })
 
-    # Prune in-memory list for this chainId
+    # prune old
     cutoff = now - MAX_AGE_SECONDS
-    pruned = []
-    for entry in seen_dict[chainId]:
-        ts = entry.get("firstSeenTs")
-        if isinstance(ts, int) and ts >= cutoff:
-            pruned.append(entry)
-    seen_dict[chainId] = pruned
+    seen_dict[chainId] = [
+        entry for entry in seen_dict[chainId]
+        if isinstance(entry.get("firstSeenTs"), int) and entry["firstSeenTs"] >= cutoff
+    ]
 
     save_seen_tokens(seen_dict)
