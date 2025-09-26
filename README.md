@@ -16,7 +16,7 @@
 
 # Token Alerts Watcher (Dockerized)
 
-This project monitors new Solana token pairs with USDC and sends alerts to **Slack** and **Discord**.
+This project monitors new Solana token pairs and sends alerts to **Slack** and **Discord**.
 
 ---
 
@@ -60,8 +60,6 @@ Update with your actual Slack and/or Discord webhooks:
 <p align="center">
   <img src="images/discord.png" alt="Discord Message Example" width="500"/>
 </p>
-
-* ✅ The USDC address shown is the **official Solana USDC mint**.
 
 ---
 
