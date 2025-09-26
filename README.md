@@ -10,7 +10,7 @@ This project monitors new Solana token pairs with USDC and sends alerts to **Sla
 ```bash
 git clone https://github.com/yourname/token-alerts.git
 cd token-alerts
-````
+```
 
 ### 2. Install dependencies (optional local run)
 
