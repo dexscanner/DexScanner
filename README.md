@@ -120,6 +120,3 @@ docker rm token-alerts
 ```
 
 ---
-
-Let me know if you'd also like to include Slack or UI previews, or if this image should be shown in a different section.
-```
