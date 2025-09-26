@@ -4,10 +4,6 @@
 
 > 🛰️ Dockerized • 🔔 Fast alerts • 🔒 Open source
 
-<p align="center">
-  <img src="images/discord.png" width="500" alt="Discord Alert Example"/>
-</p>
-
 ---
 
 ## 📢 Why DexScanner?
