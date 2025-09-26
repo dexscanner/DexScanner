@@ -20,16 +20,22 @@ def _now_ts() -> int:
     return int(time.time())
 
 
-def make_seen_key(chainId: str, tokenAddress: str | None = None, dexId: str | None = None, pairAddress: str | None = None):
+def make_seen_key(
+    chainId: str,
+    tokenAddress: str | None = None,
+    dexId: str | None = None,
+    pairAddress: str | None = None,
+):
     """
     Build a stable key:
       - Prefer pairAddress if provided (most stable across renames etc.)
-      - Else fall back to (chainId, CA, dexId).
-    NOTE: We intentionally DO NOT include tokenName in the key to avoid dupes when names change.
+      - Else fall back to (chainId, CA).
+    NOTE: We intentionally ignore dexId if we already have a CA,
+          so the same token across different dexes only alerts once.
     """
     if pairAddress:
         return (chainId, "PAIR", pairAddress)
-    return (chainId, "CA", tokenAddress, dexId)
+    return (chainId, "CA", tokenAddress)
 
 
 def load_seen_tokens():
@@ -55,7 +61,6 @@ def load_seen_tokens():
 
     now = _now_ts()
 
-    # Expecting structure: { "solana": [ { ... }, ... ] }
     for chainId, entries in (data or {}).items():
         kept = []
         if not isinstance(entries, list):
@@ -66,27 +71,30 @@ def load_seen_tokens():
             dexId = entry.get("dexId")
             tokenName = entry.get("tokenName")  # for display only
             pairAddress = entry.get("pairAddress")
-            firstSeenTs = entry.get("firstSeenTs")  # epoch seconds
+            firstSeenTs = entry.get("firstSeenTs")
 
-            # Require timestamp; if absent, drop it (legacy or corrupt)
             if not isinstance(firstSeenTs, int):
-                continue
+                continue  # malformed entry
 
-            # Prune > 8h old
+            # Skip if too old
             if now - firstSeenTs > MAX_AGE_SECONDS:
                 continue
 
-            # Rebuild stable key
-            key = make_seen_key(chainId, tokenAddress=ca, dexId=dexId, pairAddress=pairAddress)
+            # Build key (dedupes automatically by CA, ignoring dexId)
+            key = make_seen_key(chainId, tokenAddress=ca, pairAddress=pairAddress)
+
+            if key in seen_set:
+                continue  # duplicate (CA or pair already tracked)
+
             seen_set.add(key)
 
             kept.append({
                 "CA": ca,
                 "dexId": dexId,
                 "tokenName": tokenName,
-                "pairAddress": ca,
+                "pairAddress": pairAddress,
                 "firstSeenTs": firstSeenTs,
-                "ageAtFirstSeen": entry.get("ageAtFirstSeen"),  # human-readable snapshot when added
+                "ageAtFirstSeen": entry.get("ageAtFirstSeen"),
             })
 
         if kept:
@@ -118,32 +126,36 @@ def add_seen_token(
     """
     Add a new token entry (under its chainId) and prune >8h entries.
     """
-    key = make_seen_key(chainId, tokenAddress=tokenAddress, dexId=dexId, pairAddress=pairAddress)
-    if key in seen_set:
-        return  # already seen
+    tokenAddress = tokenAddress.strip() if isinstance(tokenAddress, str) else tokenAddress
+    pairAddress = (pairAddress.strip() if isinstance(pairAddress, str) else None) or None
+    dexId = dexId.strip() if isinstance(dexId, str) else dexId
 
-    seen_set.add(key)
+    key = make_seen_key(chainId, tokenAddress=tokenAddress, pairAddress=pairAddress)
 
-    if chainId not in seen_dict:
-        seen_dict[chainId] = []
+    with _FILE_LOCK:
+        if key in seen_set:
+            return  # already seen (even across different dexId)
 
-    now = _now_ts()
-    seen_dict[chainId].append({
-        "CA": tokenAddress,
-        "dexId": dexId,
-        "tokenName": tokenName,
-        "pairAddress": pairAddress,
-        "firstSeenTs": now,
-        "ageAtFirstSeen": f"{age_minutes} min ({age_seconds} sec)",
-    })
+        seen_set.add(key)
 
-    # Prune in-memory list for this chainId
-    cutoff = now - MAX_AGE_SECONDS
-    pruned = []
-    for entry in seen_dict[chainId]:
-        ts = entry.get("firstSeenTs")
-        if isinstance(ts, int) and ts >= cutoff:
-            pruned.append(entry)
-    seen_dict[chainId] = pruned
+        if chainId not in seen_dict:
+            seen_dict[chainId] = []
 
-    save_seen_tokens(seen_dict)
+        now = _now_ts()
+        seen_dict[chainId].append({
+            "CA": tokenAddress,
+            "dexId": dexId,
+            "tokenName": tokenName,
+            "pairAddress": pairAddress,
+            "firstSeenTs": now,
+            "ageAtFirstSeen": f"{age_minutes} min ({age_seconds} sec)",
+        })
+
+        # Prune old entries
+        cutoff = now - MAX_AGE_SECONDS
+        seen_dict[chainId] = [
+            entry for entry in seen_dict[chainId]
+            if isinstance(entry.get("firstSeenTs"), int) and entry["firstSeenTs"] >= cutoff
+        ]
+
+        save_seen_tokens(seen_dict)
