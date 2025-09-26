@@ -1,0 +1,5 @@
+__pycache__/
+*.log
+seen_tokens.json
+config.json
+token_alerts.log
