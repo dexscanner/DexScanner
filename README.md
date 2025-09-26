@@ -1,3 +1,23 @@
+# 👋 Welcome to DexScanner
+
+**Real-time Solana token pair alerts** — get notified on Slack or Discord when new tokens pair with USDC.
+
+> 🛰️ Dockerized • 🔔 Fast alerts • 🔒 Open source
+
+<p align="center">
+  <img src="images/discord.png" width="500" alt="Discord Alert Example"/>
+</p>
+
+---
+
+## 📢 Why DexScanner?
+
+- Monitor new token listings automatically
+- Detect scam launches or legit pairs early
+- Integrate alerts into your team's Slack/Discord
+
+---
+
 # Token Alerts Watcher (Dockerized)
 
 This project monitors new Solana token pairs with USDC and sends alerts to **Slack** and **Discord**.
