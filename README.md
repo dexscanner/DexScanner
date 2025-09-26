@@ -116,7 +116,4 @@ The watcher runs continuously inside the container and checks **every 60 seconds
 docker stop token-alerts
 docker rm token-alerts
 ```
-
-```
-
 ---
