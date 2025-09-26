@@ -47,9 +47,9 @@ Update with your actual Slack and/or Discord webhooks:
 ```json
 {
   "SLACK_WEBHOOK_URL": "https://hooks.slack.com/services/xxx/yyy/zzz",
-  "DISCORD_WEBHOOK_URL": "https://discord.com/api/webhooks/xxx/yyy",
+  "DISCORD_WEBHOOK_URLS": "https://discord.com/api/webhooks/xxx/yyy",
   "USDC_ADDRESSES": [
-    "EPjFWdd5AufqSSqeM2qHqz6xWc4Qg5Pa2k8HoWnZR49i"
+    "So11111111111111111111111111111111111111112"
   ]
 }
 ```
