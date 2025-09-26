@@ -1,6 +1,6 @@
 # 👋 Welcome to DexScanner
 
-**Real-time Solana token pair alerts** — get notified on Slack or Discord when new tokens pair with USDC.
+**Real-time Solana token pair alerts** — get notified on Slack or Discord when new tokens pair.
 
 > 🛰️ Dockerized • 🔔 Fast alerts • 🔒 Open source
 
