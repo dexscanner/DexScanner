@@ -1,10 +1,3 @@
-Here’s your updated `README.md` with an image displayed from `images/discord.png`. I’ll place it in a relevant section—most likely where Discord is mentioned in the **Testing Notifications** or **Configure** section. If you'd prefer a different placement, just let me know.
-
----
-
-### ✅ Updated README.md with Image
-
-````markdown
 # Token Alerts Watcher (Dockerized)
 
 This project monitors new Solana token pairs with USDC and sends alerts to **Slack** and **Discord**.
