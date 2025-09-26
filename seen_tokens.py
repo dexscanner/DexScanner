@@ -38,6 +38,18 @@ def make_seen_key(
     return (chainId, "CA", tokenAddress)
 
 
+def _ensure_seen_file():
+    """Ensure the seen_tokens.json file exists (create empty if missing)."""
+    if not os.path.exists(SEEN_FILE):
+        with _FILE_LOCK:
+            try:
+                with open(SEEN_FILE, "w") as f:
+                    json.dump({}, f, indent=2)
+                logging.info(f"Created new empty seen file at {SEEN_FILE}")
+            except Exception as e:
+                logging.error(f"Could not create seen file: {e}")
+
+
 def load_seen_tokens():
     """
     Load seen tokens from file and prune anything older than MAX_AGE_SECONDS.
@@ -46,11 +58,10 @@ def load_seen_tokens():
       - seen_set: set of keys for fast duplicate checks
       - seen_dict: nested dict { chainId: [ entry, ... ] } suitable for saving
     """
+    _ensure_seen_file()
+
     seen_set = set()
     seen_dict = {}
-
-    if not os.path.exists(SEEN_FILE):
-        return seen_set, seen_dict
 
     try:
         with open(SEEN_FILE, "r") as f:
@@ -104,10 +115,12 @@ def load_seen_tokens():
 
 
 def save_seen_tokens(seen_dict: dict):
+    _ensure_seen_file()
     with _FILE_LOCK:
         try:
             with open(SEEN_FILE, "w") as f:
                 json.dump(seen_dict, f, indent=2)
+            logging.info(f"Saved {len(seen_dict)} chains of tokens to {SEEN_FILE}")
         except Exception as e:
             logging.error(f"Could not save seen tokens: {e}")
 
